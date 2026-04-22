@@ -38,12 +38,12 @@ class LobbyActivity : ComponentActivity() {
             }
         }
 
-        // 🚀 Compose
         setContent {
             LobbyScreen(
                 onCreateRoom = { roomId ->
-                    viewModel.createRoom(roomId)
-                    joinAndObserve(roomId)
+                    viewModel.createRoom(roomId) {
+                        joinAndObserve(roomId)
+                    }
                 },
                 onJoinRoom = { roomId ->
                     joinAndObserve(roomId)
@@ -52,7 +52,7 @@ class LobbyActivity : ComponentActivity() {
                     viewModel.startGame(roomId)
                 },
                 onLogout = {
-                    FirebaseAuth.getInstance().signOut()  // 👈 CIERRA SESIÓN
+                    FirebaseAuth.getInstance().signOut()  //CIERRA SESIÓN
 
                     val intent = Intent(this, LoginActivity::class.java)
                     startActivity(intent)
@@ -63,9 +63,7 @@ class LobbyActivity : ComponentActivity() {
     }
 
     private fun joinAndObserve(roomId: String) {
-        viewModel.getCurrentUserData { player ->
-            viewModel.joinRoom(roomId, player)
-        }
+        viewModel.joinRoom(roomId)
     }
 
     private fun navigateToGame(roomId: String) {
