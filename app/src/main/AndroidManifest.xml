@@ -25,6 +25,7 @@
         <activity android:name=".visual.activity.LobbyActivity"/>
         <activity android:name=".visual.activity.GameActivity"/>
         <activity android:name=".visual.activity.ResultActivity"/>
+        <activity android:name=".visual.activity.LoginActivity" />
     </application>
 
 </manifest>
