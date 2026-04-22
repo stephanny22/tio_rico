@@ -130,10 +130,12 @@ fun GameScreen(
             Button(onClick = {
                 if (chatInput.isNotEmpty()) {
 
-                    val username = state?.room?.players?.get(playerId)?.name ?: "Jugador"
+                    val myUid = FirebaseAuth.getInstance().currentUser?.uid
+
+                    val username = state?.room?.players?.get(myUid)?.name ?: "Jugador"
 
                     val msg = ChatMessage(
-                        senderId = playerId,
+                        senderId = myUid ?: "",
                         senderName = username,
                         message = chatInput,
                         timestamp = System.currentTimeMillis()
