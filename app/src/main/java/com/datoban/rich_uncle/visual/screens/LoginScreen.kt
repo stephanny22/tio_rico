@@ -7,6 +7,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.datoban.rich_uncle.visual.ViewModel.LoginViewModel
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 fun LoginScreen(
@@ -41,15 +42,22 @@ fun LoginScreen(
             value = password,
             onValueChange = { viewModel.onPasswordChange(it) },
             label = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation() // 👈 OCULTA TEXTO
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
-                viewModel.login()
-                onLoginSuccess()   // 👈 AQUÍ NAVEGAS
+                viewModel.login(
+                    onSuccess = {
+                        onLoginSuccess()
+                    },
+                    onError = { error ->
+                        println(error)
+                    }
+                )
             },
             modifier = Modifier.fillMaxWidth()
         ) {

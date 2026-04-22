@@ -3,6 +3,8 @@ package com.datoban.rich_uncle.visual.ViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 
 class LoginViewModel : ViewModel() {
 
@@ -14,6 +16,8 @@ class LoginViewModel : ViewModel() {
 
     private val _username = MutableLiveData("")
     val username: LiveData<String> = _username
+    private val _error = MutableLiveData<String>()
+    val error: LiveData<String> = _error
 
     fun onEmailChange(value: String) {
         _email.value = value
@@ -26,12 +30,71 @@ class LoginViewModel : ViewModel() {
     fun onUsernameChange(value: String) {
         _username.value = value
     }
+    fun clearLoginFields() {
+        _email.value = ""
+        _password.value = ""
+    }
+    // LOGIN
+    fun login(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val email = _email.value ?: ""
+        val password = _password.value ?: ""
 
-    fun login() {
-        println("LOGIN: ${_email.value} / ${_password.value}")
+        FirebaseAuth.getInstance()
+            .signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+
+                clearLoginFields() // 👈 AQUÍ
+
+                onSuccess()
+            }
+            .addOnFailureListener {
+                _error.value = "Contraseña o correo incorrectos"
+                onError(it.message ?: "Error al iniciar sesión")
+            }
     }
 
-    fun signUp() {
-        println("SIGN UP: ${_username.value} / ${_email.value}")
+    // SIGN UP
+    fun signUp(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val email = _email.value ?: ""
+        val password = _password.value ?: ""
+        val username = _username.value ?: ""
+
+        if (email.isEmpty() || password.isEmpty() || username.isEmpty()) {
+            onError("Completa todos los campos")
+            return
+        }
+
+        FirebaseAuth.getInstance()
+            .createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener { result ->
+                clearLoginFields()
+                val uid = result.user?.uid ?: return@addOnSuccessListener
+
+                val userMap = mapOf(
+                    "id" to uid,
+                    "name" to username,
+                    "email" to email
+                )
+
+                FirebaseDatabase.getInstance()
+                    .getReference("users")
+                    .child(uid)
+                    .setValue(userMap)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener {
+                        onError("Error guardando usuario")
+                    }
+            }
+            .addOnFailureListener {
+                onError(it.message ?: "Error en registro")
+            }
     }
 }

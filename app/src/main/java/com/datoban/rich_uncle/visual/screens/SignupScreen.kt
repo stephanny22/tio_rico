@@ -7,7 +7,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.datoban.rich_uncle.visual.ViewModel.LoginViewModel
-
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 @Composable
 fun SignUpScreen(
     viewModel: LoginViewModel,
@@ -50,13 +50,22 @@ fun SignUpScreen(
             value = password,
             onValueChange = { viewModel.onPasswordChange(it) },
             label = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation() // 👈 AQUÍ
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { viewModel.signUp() },
+            onClick = {
+                viewModel.signUp(
+                onSuccess = {
+                    onBackToLogin()
+                },
+                onError = { error ->
+                    println(error) // luego puedes usar Toast
+                }
+            ) },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrarse")

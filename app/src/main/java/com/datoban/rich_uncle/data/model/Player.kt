@@ -4,9 +4,10 @@ import com.google.firebase.database.IgnoreExtraProperties
 
 @IgnoreExtraProperties
 data class Player(
-    val id: String = "",
-    val name: String = "",
-    var money: Int = 1000,
-    var isAlive: Boolean = true,
-    var currentTurn: Int = 0
+    var id: String = "",
+    var name: String = "",
+    var money: Int = 0,
+    var alive: Boolean = true,
+    var lastAction: String = "",
+    var lastResult: Int = 0
 )

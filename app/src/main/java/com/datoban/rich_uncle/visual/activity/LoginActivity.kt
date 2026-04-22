@@ -19,6 +19,12 @@ class LoginActivity : ComponentActivity() {
 
         viewModel = ViewModelProvider(this)[LoginViewModel::class.java]
 
+        viewModel.error.observe(this) { msg ->
+            if (msg.isNotEmpty()) {
+                android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+
         setContent {
 
             var currentScreen by remember { mutableStateOf("login") }

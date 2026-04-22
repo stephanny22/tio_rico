@@ -25,11 +25,26 @@ class GameRepository {
 
                         // Deserializar jugadores manualmente
                         val players = mutableMapOf<String, Player>()
+
                         snapshot.child("players").children.forEach { playerSnap ->
-                            val player = playerSnap.getValue(Player::class.java)
-                            if (player != null) {
-                                players[playerSnap.key ?: ""] = player
-                            }
+
+                            val id = playerSnap.child("id").getValue(String::class.java) ?: ""
+                            val name = playerSnap.child("name").getValue(String::class.java) ?: "Jugador"
+                            val money = playerSnap.child("money").getValue(Int::class.java) ?: 0
+                            val alive = playerSnap.child("alive").getValue(Boolean::class.java) ?: true
+                            val lastAction = playerSnap.child("lastAction").getValue(String::class.java) ?: ""
+                            val lastResult = playerSnap.child("lastResult").getValue(Int::class.java) ?: 0
+
+                            val player = Player(
+                                id = id,
+                                name = name,
+                                money = money,
+                                alive = alive,
+                                lastAction = lastAction,
+                                lastResult = lastResult
+                            )
+
+                            players[playerSnap.key ?: ""] = player
                         }
 
                         liveData.value = GameRoom(
@@ -71,7 +86,30 @@ class GameRepository {
     }
 
     fun resetRoom(roomId: String) {
-        FirebaseService.getRoomRef(roomId).child("currentTurn").setValue(0)
-        FirebaseService.getRoomRef(roomId).child("status").setValue("WAITING")
+        FirebaseService.getRoomRef(roomId).get()
+            .addOnSuccessListener { snapshot ->
+
+                val playersSnap = snapshot.child("players")
+
+                playersSnap.children.forEach { playerSnap ->
+
+                    val id = playerSnap.child("id").getValue(String::class.java) ?: return@forEach
+                    val name = playerSnap.child("name").getValue(String::class.java) ?: "Jugador"
+
+                    val player = Player(
+                        id = id,
+                        name = name,
+                        money = 1000,
+                        alive = true,
+                        lastAction = "",
+                        lastResult = 0
+                    )
+
+                    updatePlayer(roomId, player)
+                }
+
+                advanceTurn(roomId, 0)
+                setRoomStatus(roomId, "WAITING")
+            }
     }
 }

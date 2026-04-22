@@ -41,41 +41,44 @@ class GameViewModel(
 
     fun onActionSelected(roomId: String, playerId: String, action: Action) {
         val state  = _gameState.value ?: return
-        val player = state.room.players[playerId]?.copy() ?: return
+        val room   = state.room
+        val player = room.players[playerId]?.copy() ?: return
 
         // 1. Aplicar acción
         val (delta, resultMsg) = performAction.execute(action)
         player.money += delta
+        player.lastAction = action.name
+        player.lastResult = delta
         actionResult.value = resultMsg
 
-        // 2. Aplicar evento aleatorio
+        // 2. Evento aleatorio
         val (eventMsg, eventDelta) = randomEvent.execute()
         if (eventMsg.isNotEmpty()) {
             player.money += eventDelta
+            player.lastResult += eventDelta
             eventMessage.value = eventMsg
         }
 
-        // 3. Avanzar turno del jugador
-        player.currentTurn += 1
-
-        // 4. Verificar eliminación
-        if (checkVictory.isEliminated(player)) {
-            player.isAlive = false
+        // 3. Verificar eliminación
+        if (player.money <= 0) {
+            player.alive = false
             gameRepo.updatePlayer(roomId, player)
             gameOver.value = "LOSE"
             return
         }
 
-        // 5. Verificar victoria
-        if (checkVictory.execute(player, state.room.maxTurns)) {
+        // 4. Verificar victoria (usa turno global)
+        if (room.currentTurn >= room.maxTurns) {
             gameRepo.updatePlayer(roomId, player)
             gameOver.value = "WIN"
             return
         }
 
-        // 6. Guardar jugador y avanzar turno global
+        // 5. Guardar jugador
         gameRepo.updatePlayer(roomId, player)
-        gameRepo.advanceTurn(roomId, state.room.currentTurn + 1)
+
+        // 6. Avanzar turno global
+        gameRepo.advanceTurn(roomId, room.currentTurn + 1)
     }
 
     fun sendChatMessage(roomId: String, message: ChatMessage) {

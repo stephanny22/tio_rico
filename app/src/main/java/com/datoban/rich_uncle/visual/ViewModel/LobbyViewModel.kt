@@ -8,8 +8,10 @@ import com.datoban.rich_uncle.data.model.Player
 import com.datoban.rich_uncle.data.remote.FirebaseService
 import com.datoban.rich_uncle.data.repository.GameRepository
 import com.datoban.rich_uncle.util.Constants
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 class LobbyViewModel(private val repo: GameRepository) : ViewModel() {
@@ -63,7 +65,29 @@ class LobbyViewModel(private val repo: GameRepository) : ViewModel() {
                 _error.value = "Error verificando sala: ${e.message}"
             }
     }
+    fun getCurrentUserData(onResult: (Player) -> Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
+        FirebaseDatabase.getInstance()
+            .getReference("users")
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val name = snapshot.child("name").getValue(String::class.java) ?: "Jugador"
+
+                val player = Player(
+                    id = uid,
+                    name = name,
+                    money = Constants.INITIAL_MONEY,
+                    alive = true,
+                    lastAction = "",
+                    lastResult = 0
+                )
+
+                onResult(player)
+            }
+    }
     fun startGame(roomId: String) {
         if (roomId.isEmpty()) {
             _error.value = "Ingresa un ID de sala primero"
@@ -118,5 +142,58 @@ class LobbyViewModel(private val repo: GameRepository) : ViewModel() {
         if (currentRoomId.isNotEmpty() && roomListener != null) {
             FirebaseService.getRoomRef(currentRoomId).removeEventListener(roomListener!!)
         }
+    }
+    fun register(
+        email: String,
+        password: String,
+        name: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        val auth = FirebaseAuth.getInstance()
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener { result ->
+
+                val uid = result.user?.uid ?: return@addOnSuccessListener
+
+                val userMap = mapOf(
+                    "id" to uid,
+                    "name" to name,
+                    "email" to email
+                )
+
+                FirebaseDatabase.getInstance()
+                    .getReference("users")
+                    .child(uid)
+                    .setValue(userMap)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener {
+                        onError("Error guardando usuario")
+                    }
+            }
+            .addOnFailureListener {
+                onError(it.message ?: "Error en registro")
+            }
+    }
+
+    fun login(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        FirebaseAuth.getInstance()
+            .signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onError(it.message ?: "Error al iniciar sesión")
+            }
     }
 }

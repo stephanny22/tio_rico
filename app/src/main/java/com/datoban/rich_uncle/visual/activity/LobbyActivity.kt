@@ -56,12 +56,9 @@ class LobbyActivity : ComponentActivity() {
     }
 
     private fun joinAndObserve(roomId: String) {
-        val player = Player(
-            id    = myId,
-            name  = myName,
-            money = Constants.INITIAL_MONEY
-        )
-        viewModel.joinRoom(roomId, player)
+        viewModel.getCurrentUserData { player ->
+            viewModel.joinRoom(roomId, player)
+        }
     }
 
     private fun navigateToGame(roomId: String) {
