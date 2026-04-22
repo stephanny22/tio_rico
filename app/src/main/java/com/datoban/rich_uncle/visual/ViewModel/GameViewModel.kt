@@ -1,0 +1,91 @@
+package com.datoban.rich_uncle.visual.ViewModel
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import com.datoban.rich_uncle.data.model.Action
+import com.datoban.rich_uncle.data.model.ChatMessage
+import com.datoban.rich_uncle.data.model.GameState
+import com.datoban.rich_uncle.data.repository.ChatRepository
+import com.datoban.rich_uncle.data.repository.GameRepository
+import com.datoban.rich_uncle.domain.usecase.ApplyRandomEventUseCase
+import com.datoban.rich_uncle.domain.usecase.CheckVictoryUseCase
+import com.datoban.rich_uncle.domain.usecase.PerformActionUseCase
+
+class GameViewModel(
+    private val gameRepo    : GameRepository,
+    private val chatRepo    : ChatRepository,
+    private val performAction : PerformActionUseCase,
+    private val randomEvent   : ApplyRandomEventUseCase,
+    private val checkVictory  : CheckVictoryUseCase
+) : ViewModel() {
+
+    private val _gameState = MutableLiveData<GameState>()
+    val gameState: LiveData<GameState> = _gameState
+
+    private val _messages = MutableLiveData<List<ChatMessage>>()
+    val messages: LiveData<List<ChatMessage>> = _messages
+
+    val eventMessage = MutableLiveData<String>()
+    val actionResult = MutableLiveData<String>()
+    val gameOver     = MutableLiveData<String>() // "WIN" | "LOSE"
+
+    fun loadRoom(roomId: String) {
+        gameRepo.observeRoom(roomId).observeForever { room ->
+            _gameState.value = GameState(room = room)
+        }
+        chatRepo.observeMessages(roomId).observeForever { msgs ->
+            _messages.value = msgs
+        }
+    }
+
+    fun onActionSelected(roomId: String, playerId: String, action: Action) {
+        val state  = _gameState.value ?: return
+        val player = state.room.players[playerId]?.copy() ?: return
+
+        // 1. Aplicar acción
+        val (delta, resultMsg) = performAction.execute(action)
+        player.money += delta
+        actionResult.value = resultMsg
+
+        // 2. Aplicar evento aleatorio
+        val (eventMsg, eventDelta) = randomEvent.execute()
+        if (eventMsg.isNotEmpty()) {
+            player.money += eventDelta
+            eventMessage.value = eventMsg
+        }
+
+        // 3. Avanzar turno del jugador
+        player.currentTurn += 1
+
+        // 4. Verificar eliminación
+        if (checkVictory.isEliminated(player)) {
+            player.isAlive = false
+            gameRepo.updatePlayer(roomId, player)
+            gameOver.value = "LOSE"
+            return
+        }
+
+        // 5. Verificar victoria
+        if (checkVictory.execute(player, state.room.maxTurns)) {
+            gameRepo.updatePlayer(roomId, player)
+            gameOver.value = "WIN"
+            return
+        }
+
+        // 6. Guardar jugador y avanzar turno global
+        gameRepo.updatePlayer(roomId, player)
+        gameRepo.advanceTurn(roomId, state.room.currentTurn + 1)
+    }
+
+    fun sendChatMessage(roomId: String, message: ChatMessage) {
+        chatRepo.sendMessage(roomId, message)
+    }
+
+    fun resetGame(roomId: String) {
+        gameRepo.resetRoom(roomId)
+        gameOver.value = ""
+        eventMessage.value = ""
+        actionResult.value = ""
+    }
+}
