@@ -1,0 +1,77 @@
+package com.datoban.rich_uncle.data.repository
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.datoban.rich_uncle.data.model.GameRoom
+import com.datoban.rich_uncle.data.model.Player
+import com.datoban.rich_uncle.data.remote.FirebaseService
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
+
+class GameRepository {
+
+    fun observeRoom(roomId: String): LiveData<GameRoom> {
+        val liveData = MutableLiveData<GameRoom>()
+
+        FirebaseService.getRoomRef(roomId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        val roomId   = snapshot.child("roomId").getValue(String::class.java) ?: ""
+                        val currentTurn = snapshot.child("currentTurn").getValue(Int::class.java) ?: 0
+                        val maxTurns = snapshot.child("maxTurns").getValue(Int::class.java) ?: 10
+                        val status   = snapshot.child("status").getValue(String::class.java) ?: "WAITING"
+
+                        // Deserializar jugadores manualmente
+                        val players = mutableMapOf<String, Player>()
+                        snapshot.child("players").children.forEach { playerSnap ->
+                            val player = playerSnap.getValue(Player::class.java)
+                            if (player != null) {
+                                players[playerSnap.key ?: ""] = player
+                            }
+                        }
+
+                        liveData.value = GameRoom(
+                            roomId      = roomId,
+                            players     = players,
+                            currentTurn = currentTurn,
+                            maxTurns    = maxTurns,
+                            status      = status
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("GameRepository", "Error deserializando sala: ${e.message}")
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    android.util.Log.e("GameRepository", "Firebase cancelado: ${error.message}")
+                }
+            })
+
+        return liveData
+    }
+
+    fun updatePlayer(roomId: String, player: Player) {
+        FirebaseService.getPlayersRef(roomId)
+            .child(player.id)
+            .setValue(player)
+    }
+
+    fun advanceTurn(roomId: String, nextTurn: Int) {
+        FirebaseService.getRoomRef(roomId)
+            .child("currentTurn")
+            .setValue(nextTurn)
+    }
+
+    fun setRoomStatus(roomId: String, status: String) {
+        FirebaseService.getRoomRef(roomId)
+            .child("status")
+            .setValue(status)
+    }
+
+    fun resetRoom(roomId: String) {
+        FirebaseService.getRoomRef(roomId).child("currentTurn").setValue(0)
+        FirebaseService.getRoomRef(roomId).child("status").setValue("WAITING")
+    }
+}
