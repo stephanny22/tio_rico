@@ -53,15 +53,19 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
 
+
     // AppCompat + Activity + Fragment
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
 
+
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("com.google.firebase:firebase-database-ktx:21.0.0")
     implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
+
 
     // ViewModel + LiveData
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
