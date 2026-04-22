@@ -26,43 +26,68 @@ class LobbyViewModel(private val repo: GameRepository) : ViewModel() {
     private var roomListener: ValueEventListener? = null
     private var currentRoomId: String = ""
 
-    fun createRoom(roomId: String) {
+    fun createRoom(roomId: String, onCreated: () -> Unit) {
+
         val newRoom = GameRoom(
-            roomId   = roomId,
+            roomId = roomId,
             maxTurns = Constants.MAX_TURNS,
-            status   = "WAITING"
+            status = "WAITING",
+            currentTurn = 0,
+            players = emptyMap()
         )
+
         FirebaseService.getRoomRef(roomId)
             .setValue(newRoom)
             .addOnSuccessListener {
-                observeRoom(roomId)   // ← empezar a escuchar DESPUÉS de crear
+                observeRoom(roomId)
+                onCreated()   // avisa que YA se creó
             }
             .addOnFailureListener { e ->
                 _error.value = "Error creando sala: ${e.message}"
             }
     }
 
-    fun joinRoom(roomId: String, player: Player) {
-        // Primero verificar que la sala existe
-        FirebaseService.getRoomRef(roomId).get()
+    fun joinRoom(roomId: String) {
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
+            _error.value = "Usuario no autenticado"
+            return
+        }
+
+        FirebaseDatabase.getInstance()
+            .getReference("users")
+            .child(uid)
+            .get()
             .addOnSuccessListener { snapshot ->
-                if (!snapshot.exists()) {
-                    _error.value = "La sala '$roomId' no existe"
-                    return@addOnSuccessListener
-                }
-                // Agregar jugador y luego escuchar
-                FirebaseService.getPlayersRef(roomId)
-                    .child(player.id)
-                    .setValue(player)
-                    .addOnSuccessListener {
-                        observeRoom(roomId)   // ← escuchar DESPUÉS de unirse
+
+                val name = snapshot.child("name").getValue(String::class.java) ?: "Jugador"
+
+                val player = Player(
+                    id = uid,
+                    name = name,
+                    money = Constants.INITIAL_MONEY,
+                    alive = true,
+                    lastAction = "",
+                    lastResult = 0
+                )
+
+                FirebaseService.getRoomRef(roomId).get()
+                    .addOnSuccessListener { roomSnap ->
+                        if (!roomSnap.exists()) {
+                            _error.value = "La sala no existe"
+                            return@addOnSuccessListener
+                        }
+
+                        FirebaseService.getPlayersRef(roomId)
+                            .child(uid)
+                            .setValue(player)
+                            .addOnSuccessListener {
+                                observeRoom(roomId)
+                            }
+                            .addOnFailureListener {
+                                _error.value = "Error uniéndose"
+                            }
                     }
-                    .addOnFailureListener { e ->
-                        _error.value = "Error uniéndose: ${e.message}"
-                    }
-            }
-            .addOnFailureListener { e ->
-                _error.value = "Error verificando sala: ${e.message}"
             }
     }
     fun getCurrentUserData(onResult: (Player) -> Unit) {
@@ -111,9 +136,12 @@ class LobbyViewModel(private val repo: GameRepository) : ViewModel() {
                     val status      = snapshot.child("status").getValue(String::class.java) ?: "WAITING"
 
                     val players = mutableMapOf<String, Player>()
-                    snapshot.child("players").children.forEach { playerSnap ->
-                        val p = playerSnap.getValue(Player::class.java)
-                        if (p != null) players[playerSnap.key ?: ""] = p
+
+                    snapshot.child("players").children.forEach { snap ->
+                        val player = snap.getValue(Player::class.java)
+                        if (player != null) {
+                            players[player.id] = player
+                        }
                     }
 
                     _room.value = GameRoom(
