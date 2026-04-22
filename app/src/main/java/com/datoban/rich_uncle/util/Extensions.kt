@@ -1,8 +1,8 @@
 package com.datoban.rich_uncle.util
 
+import android.content.Context
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 
-fun AppCompatActivity.showToast(message: String) {
-    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+fun Context.showToast(msg: String) {
+    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 }
