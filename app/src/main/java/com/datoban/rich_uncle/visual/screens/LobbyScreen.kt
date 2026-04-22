@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.dp
 fun LobbyScreen(
     onCreateRoom: (String) -> Unit,
     onJoinRoom: (String) -> Unit,
-    onStartGame: (String) -> Unit
+    onStartGame: (String) -> Unit,
+    onLogout: () -> Unit
 ) {
     var roomId by remember { mutableStateOf("") }
 
@@ -60,6 +61,14 @@ fun LobbyScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Iniciar juego")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { onLogout() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Salir")
         }
     }
 }

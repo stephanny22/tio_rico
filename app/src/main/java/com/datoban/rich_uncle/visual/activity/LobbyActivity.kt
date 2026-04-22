@@ -50,6 +50,13 @@ class LobbyActivity : ComponentActivity() {
                 },
                 onStartGame = { roomId ->
                     viewModel.startGame(roomId)
+                },
+                onLogout = {
+                    FirebaseAuth.getInstance().signOut()  // 👈 CIERRA SESIÓN
+
+                    val intent = Intent(this, LoginActivity::class.java)
+                    startActivity(intent)
+                    finish()
                 }
             )
         }
