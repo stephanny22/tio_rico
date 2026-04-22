@@ -11,6 +11,8 @@ import com.datoban.rich_uncle.data.repository.GameRepository
 import com.datoban.rich_uncle.domain.usecase.ApplyRandomEventUseCase
 import com.datoban.rich_uncle.domain.usecase.CheckVictoryUseCase
 import com.datoban.rich_uncle.domain.usecase.PerformActionUseCase
+import com.google.firebase.auth.FirebaseAuth
+
 
 class GameViewModel(
     private val gameRepo    : GameRepository,
@@ -84,6 +86,8 @@ class GameViewModel(
     fun sendChatMessage(roomId: String, message: ChatMessage) {
         chatRepo.sendMessage(roomId, message)
     }
+
+
 
     fun resetGame(roomId: String) {
         gameRepo.resetRoom(roomId)

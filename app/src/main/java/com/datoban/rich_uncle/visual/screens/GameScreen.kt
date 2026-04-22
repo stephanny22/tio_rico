@@ -1,6 +1,7 @@
 package com.datoban.rich_uncle.visual.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,6 +34,9 @@ fun GameScreen(
 
     val context = LocalContext.current
 
+    val myUserId = FirebaseAuth.getInstance().currentUser?.uid
+
+    // 🔥 Navegación por fin de juego
     LaunchedEffect(gameOver) {
         when (gameOver) {
             "WIN" -> onNavigateResult(true)
@@ -40,6 +44,7 @@ fun GameScreen(
         }
     }
 
+    // 🔥 Mostrar eventos
     LaunchedEffect(eventMessage) {
         if (eventMessage.isNotEmpty()) {
             Toast.makeText(context, eventMessage, Toast.LENGTH_SHORT).show()
@@ -54,6 +59,7 @@ fun GameScreen(
             .padding(16.dp)
     ) {
 
+        // 🔹 INFO DEL JUEGO
         Text("Turno: ${state?.room?.currentTurn ?: 0} / ${state?.room?.maxTurns ?: 0}")
         Text("💰 $${me?.money ?: 0}", style = MaterialTheme.typography.headlineMedium)
 
@@ -61,6 +67,7 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 🔹 ACCIONES
         Button(onClick = {
             viewModel.onActionSelected(roomId, playerId, Action.SAVE)
         }) { Text("💾 Ahorrar") }
@@ -73,16 +80,45 @@ fun GameScreen(
             viewModel.onActionSelected(roomId, playerId, Action.SPEND)
         }) { Text("🛍 Gastar") }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
+        // 🔥 CHAT
         LazyColumn(
             modifier = Modifier.weight(1f)
         ) {
             items(messages) { msg ->
-                Text("${msg.senderName}: ${msg.message}")
+
+                val isMe = msg.senderId == myUserId
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+                ) {
+
+                    Column(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .background(
+                                if (isMe) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .padding(12.dp)
+                    ) {
+
+                        Text(
+                            text = if (isMe) "Tú" else msg.senderName,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+
+                        Text(
+                            text = msg.message
+                        )
+                    }
+                }
             }
         }
 
+        // 🔹 INPUT CHAT
         Row {
             TextField(
                 value = chatInput,
@@ -93,12 +129,16 @@ fun GameScreen(
 
             Button(onClick = {
                 if (chatInput.isNotEmpty()) {
+
+                    val username = state?.room?.players?.get(playerId)?.name ?: "Jugador"
+
                     val msg = ChatMessage(
                         senderId = playerId,
-                        senderName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Jugador",
+                        senderName = username,
                         message = chatInput,
                         timestamp = System.currentTimeMillis()
                     )
+
                     viewModel.sendChatMessage(roomId, msg)
                     chatInput = ""
                 }
@@ -106,6 +146,8 @@ fun GameScreen(
                 Text("Enviar")
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = { viewModel.resetGame(roomId) }) {
             Text("🔄 Reiniciar")

@@ -42,14 +42,33 @@ class LoginViewModel : ViewModel() {
         val email = _email.value ?: ""
         val password = _password.value ?: ""
 
+
         FirebaseAuth.getInstance()
             .signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
+            .addOnSuccessListener { result ->
 
-                clearLoginFields() // 👈 AQUÍ
+                val uid = result.user?.uid ?: return@addOnSuccessListener
 
-                onSuccess()
+                FirebaseDatabase.getInstance()
+                    .getReference("users")
+                    .child(uid)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+
+                        val name = snapshot.child("name").getValue(String::class.java) ?: "Anon"
+
+                        _username.value = name // 🔥 GUARDAS EL NOMBRE
+                        println("USERNAME ACTUAL: ${_username.value}")
+
+                        clearLoginFields()
+
+                        onSuccess()
+                    }
+                    .addOnFailureListener {
+                        onError("Error obteniendo usuario")
+                    }
             }
+
             .addOnFailureListener {
                 _error.value = "Contraseña o correo incorrectos"
                 onError(it.message ?: "Error al iniciar sesión")

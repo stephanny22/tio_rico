@@ -25,6 +25,7 @@ class ChatRepository {
         return liveData
     }
 
+
     fun sendMessage(roomId: String, message: ChatMessage) {
         FirebaseService.getChatRef(roomId)
             .push()
